@@ -1,20 +1,17 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Robust check for the API key in various deployment environments
-const getApiKey = () => {
-  try {
-    return process.env.API_KEY || '';
-  } catch (e) {
-    return '';
-  }
-};
+// Always initialize the client using a named parameter with the API key directly from the environment.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
+/**
+ * Provides personalized reading advice using the Gemini 3 Flash model.
+ * @param title The book title
+ * @param pagesLeft Number of pages remaining
+ * @param pace Targeted reading pace (pages per day)
+ * @returns A motivating tip or fact string
+ */
 export const getReadingAdvice = async (title: string, pagesLeft: number, pace: number) => {
-  if (!getApiKey()) return "Set an API key to get personalized reading tips!";
-  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -23,9 +20,10 @@ export const getReadingAdvice = async (title: string, pagesLeft: number, pace: n
         temperature: 0.7,
       },
     });
+    // Accessing .text as a property as required by the SDK guidelines.
     return response.text;
   } catch (error) {
     console.error("Error fetching reading advice:", error);
-    return "Keep going! Every page turned is a step closer to completing your journey through this book.";
+    return null;
   }
 };
