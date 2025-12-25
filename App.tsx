@@ -17,6 +17,8 @@ import {
 import { format, addDays } from 'date-fns';
 import { ReadingData, ScheduleItem } from './types';
 
+const STORAGE_KEY = 'bookbound_data';
+
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -26,13 +28,29 @@ const App: React.FC = () => {
     return false;
   });
 
-  const [data, setData] = useState<ReadingData>({
-    bookTitle: '',
-    totalPages: 0,
-    pagesRead: 0,
-    targetFinishDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
-    pagesPerDay: 20
+  // Initialize data from localStorage or defaults
+  const [data, setData] = useState<ReadingData>(() => {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      try {
+        return JSON.parse(savedData);
+      } catch (e) {
+        console.error("Failed to parse saved data", e);
+      }
+    }
+    return {
+      bookTitle: '',
+      totalPages: 0,
+      pagesRead: 0,
+      targetFinishDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
+      pagesPerDay: 20
+    };
   });
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
 
   useEffect(() => {
     if (darkMode) {
@@ -339,6 +357,7 @@ const App: React.FC = () => {
 
       <footer className="max-w-7xl mx-auto px-6 py-8 text-center border-t border-[#C6C6C8] dark:border-[#38383A] mt-8">
         <p className="text-[13px] font-medium text-[#8E8E93]">BookBound: Your Companion for Reading Mastery</p>
+        <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest mt-2">© {new Date().getFullYear()} Imran Khan</p>
       </footer>
     </div>
   );
