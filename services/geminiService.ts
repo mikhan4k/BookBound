@@ -1,9 +1,20 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Robust check for the API key in various deployment environments
+const getApiKey = () => {
+  try {
+    return process.env.API_KEY || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export const getReadingAdvice = async (title: string, pagesLeft: number, pace: number) => {
+  if (!getApiKey()) return "Set an API key to get personalized reading tips!";
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

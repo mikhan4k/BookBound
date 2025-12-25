@@ -25,6 +25,10 @@
         padding: 0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        background-color: #F2F2F7;
+      }
+      .dark body {
+        background-color: #000000;
       }
       /* Custom scrollbar for a cleaner iOS look */
       ::-webkit-scrollbar {
@@ -48,13 +52,17 @@
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "react": "https://esm.sh/react@^19.2.3",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "date-fns": "https://esm.sh/date-fns@^4.1.0"
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <!-- Explicitly load the entry point -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
