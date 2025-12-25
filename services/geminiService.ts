@@ -1,30 +1,20 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-let aiInstance: GoogleGenAI | null = null;
-
-const getAi = () => {
-  if (!aiInstance) {
-    // Only attempt to initialize if we have access to process.env.API_KEY
-    try {
-      const apiKey = process.env.API_KEY;
-      if (apiKey) {
-        aiInstance = new GoogleGenAI({ apiKey });
-      }
-    } catch (e) {
-      console.warn("AI initialization delayed: process.env.API_KEY not yet available.");
-    }
+// Robust check for the API key in various deployment environments
+const getApiKey = () => {
+  try {
+    return process.env.API_KEY || '';
+  } catch (e) {
+    return '';
   }
-  return aiInstance;
 };
 
-/**
- * Provides personalized reading advice using the Gemini 3 Flash model.
- */
-export const getReadingAdvice = async (title: string, pagesLeft: number, pace: number) => {
-  const ai = getAi();
-  if (!ai) return null;
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
+export const getReadingAdvice = async (title: string, pagesLeft: number, pace: number) => {
+  if (!getApiKey()) return "Set an API key to get personalized reading tips!";
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -33,10 +23,9 @@ export const getReadingAdvice = async (title: string, pagesLeft: number, pace: n
         temperature: 0.7,
       },
     });
-    
     return response.text;
   } catch (error) {
     console.error("Error fetching reading advice:", error);
-    return null;
+    return "Keep going! Every page turned is a step closer to completing your journey through this book.";
   }
 };

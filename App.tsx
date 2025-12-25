@@ -9,16 +9,12 @@ import {
   Moon, 
   Target,
   BookMarked,
-  LayoutDashboard,
-  Sparkles,
-  TrendingUp,
-  ChevronRight
+  LayoutDashboard
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ReadingData, ScheduleItem } from './types';
-import { getReadingAdvice } from './services/geminiService';
 
-const STORAGE_KEY = 'bookbound_data_v2';
+const STORAGE_KEY = 'bookbound_data';
 
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(() => {
@@ -47,8 +43,6 @@ const App: React.FC = () => {
     };
   });
 
-  const [advice, setAdvice] = useState<string>('');
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
@@ -64,25 +58,7 @@ const App: React.FC = () => {
   }, [darkMode]);
 
   const today = useMemo(() => new Date(), []);
-  const pagesLeft = Math.max(0, (Number(data.totalPages) || 0) - (Number(data.pagesRead) || 0));
-  const completionPercent = data.totalPages > 0 ? Math.min(100, Math.round((data.pagesRead / data.totalPages) * 100)) : 0;
-
-  useEffect(() => {
-    if (!data.bookTitle || pagesLeft === 0) {
-      setAdvice('');
-      return;
-    }
-    const fetchAdvice = async () => {
-      try {
-        const tip = await getReadingAdvice(data.bookTitle, pagesLeft, data.pagesPerDay);
-        if (tip) setAdvice(tip);
-      } catch (e) {
-        console.error("Gemini service failed", e);
-      }
-    };
-    const timer = setTimeout(fetchAdvice, 2000);
-    return () => clearTimeout(timer);
-  }, [data.bookTitle, pagesLeft, data.pagesPerDay]);
+  const pagesLeft = Math.max(0, data.totalPages - data.pagesRead);
 
   const schedule = useMemo(() => {
     const items: ScheduleItem[] = [];
@@ -100,6 +76,7 @@ const App: React.FC = () => {
       
       const startPage = currentPagesRead + 1;
       const endPage = currentPagesRead + readToday;
+      
       currentPagesRead += readToday;
       
       items.push({
@@ -112,8 +89,9 @@ const App: React.FC = () => {
       });
 
       dayCount++;
-      if (dayCount > 180) break; 
+      if (dayCount > 180) break; // Limit to 6 months
     }
+
     return items;
   }, [data, pagesLeft, today]);
 
@@ -130,122 +108,107 @@ const App: React.FC = () => {
     setData(prev => ({ ...prev, [name]: newValue }));
   };
 
+  const toggleDarkMode = () => setDarkMode(!darkMode);
+
   return (
-    <div className="min-h-screen transition-colors duration-500 bg-gradient-to-tr from-indigo-50 via-white to-rose-50 dark:from-slate-950 dark:via-black dark:to-indigo-950 text-slate-900 dark:text-slate-100 font-sans pb-12 selection:bg-rose-500 selection:text-white">
-      
-      {/* Dynamic Navigation */}
-      <header className="sticky top-0 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-indigo-100 dark:border-indigo-900/50 px-4 py-3">
+    <div className="min-h-screen transition-colors duration-300 bg-[#F2F2F7] dark:bg-[#000000] text-black dark:text-white font-sans selection:bg-blue-500 selection:text-white pb-6">
+      {/* Compact Header */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-md border-b border-[#C6C6C8] dark:border-[#38383A] px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none">
+            <div className="bg-blue-500 p-1 rounded-lg">
               <BookOpen className="text-white w-4 h-4" />
             </div>
-            <h1 className="text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-rose-500">BookBound</h1>
+            <h1 className="text-lg font-bold tracking-tight">BookBound</h1>
           </div>
           
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-[11px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[12px] font-semibold text-[#8E8E93]">
               <Calendar className="w-3 h-3" />
               <span>{format(today, 'MMM d, yyyy')}</span>
             </div>
             <button 
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:scale-110 active:scale-95 transition-all"
+              onClick={toggleDarkMode}
+              className="p-1.5 rounded-full hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] transition-colors"
             >
-              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
+              {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 py-4 space-y-4">
         
-        {/* Title Row */}
-        <div className="flex items-center justify-between gap-3 bg-white/40 dark:bg-slate-900/40 p-3 rounded-2xl border border-white/50 dark:border-slate-800/50 backdrop-blur-sm">
+        {/* Title and Date Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/30 text-rose-500">
-              <LayoutDashboard className="w-4 h-4" />
-            </div>
-            <h2 className="text-sm font-black tracking-tight uppercase text-slate-500 dark:text-slate-400">Dashboard</h2>
+            <LayoutDashboard className="w-5 h-5 text-blue-500" />
+            <h2 className="text-xl font-bold">Planner</h2>
           </div>
-          <div className="text-[11px] font-black text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-indigo-500" /> Today: {format(today, 'EEE, d MMM')}
+          <div className="text-[12px] font-medium text-[#8E8E93] flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Today: {format(today, 'EEEE, MMM do')}
           </div>
         </div>
 
-        {/* AI Insight Bar */}
-        {advice && (
-          <div className="relative group overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-600 p-[1px] rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-none">
-            <div className="bg-white dark:bg-slate-900 px-4 py-3 rounded-[15px] flex gap-3 items-center">
-              <div className="bg-gradient-to-br from-amber-400 to-rose-500 p-2 rounded-xl shadow-lg">
-                <Sparkles className="w-4 h-4 text-white animate-pulse" />
-              </div>
-              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-300 italic">
-                "{advice}"
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Compact Grid */}
+        {/* Form and Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           
           {/* Inputs Section */}
-          <div className="md:col-span-5">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border-2 border-indigo-50 dark:border-indigo-900/30 shadow-sm">
-              <h3 className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase mb-4 tracking-[0.2em] flex items-center gap-2">
-                <Target className="w-3 h-3" /> Book Settings
-              </h3>
+          <div className="md:col-span-5 space-y-3">
+            <div className="bg-white dark:bg-[#1C1C1E] p-4 rounded-2xl border border-[#C6C6C8] dark:border-[#38383A] shadow-sm">
+              <h3 className="text-[11px] font-bold text-[#8E8E93] uppercase mb-3 tracking-widest">Book Stats</h3>
               <div className="space-y-3">
-                <input 
-                  type="text" 
-                  name="bookTitle"
-                  value={data.bookTitle}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-700 focus:border-indigo-400 focus:ring-0 text-[14px] font-bold"
-                  placeholder="What are you reading?"
-                />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <input 
+                    type="text" 
+                    name="bookTitle"
+                    value={data.bookTitle}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] border-none focus:ring-1 focus:ring-blue-500 text-[14px]"
+                    placeholder="Book Title"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Total</label>
+                    <label className="text-[10px] font-bold text-[#8E8E93] uppercase ml-1">Total Pages</label>
                     <input 
                       type="number" 
                       name="totalPages"
                       value={data.totalPages || ''}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-700 focus:border-purple-400 text-[14px] font-bold"
+                      className="w-full px-3 py-2 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] border-none focus:ring-1 focus:ring-blue-500 text-[14px]"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Read</label>
+                    <label className="text-[10px] font-bold text-[#8E8E93] uppercase ml-1">Pages Read</label>
                     <input 
                       type="number" 
                       name="pagesRead"
                       value={data.pagesRead || ''}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-700 focus:border-rose-400 text-[14px] font-bold"
+                      className="w-full px-3 py-2 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] border-none focus:ring-1 focus:ring-blue-500 text-[14px]"
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Deadline</label>
+                    <label className="text-[10px] font-bold text-[#8E8E93] uppercase ml-1">Target End Date</label>
                     <input 
                       type="date" 
                       name="targetFinishDate"
                       value={data.targetFinishDate}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-700 focus:border-amber-400 text-[12px] font-bold [color-scheme:light] dark:[color-scheme:dark]"
+                      className="w-full px-3 py-2 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] border-none focus:ring-1 focus:ring-blue-500 text-[13px] [color-scheme:light] dark:[color-scheme:dark]"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Daily Goal</label>
+                    <label className="text-[10px] font-bold text-[#8E8E93] uppercase ml-1">Daily Goal</label>
                     <input 
                       type="number" 
                       name="pagesPerDay"
                       value={data.pagesPerDay || ''}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-700 focus:border-emerald-400 text-[14px] font-bold"
+                      className="w-full px-3 py-2 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] border-none focus:ring-1 focus:ring-blue-500 text-[14px]"
                     />
                   </div>
                 </div>
@@ -255,86 +218,53 @@ const App: React.FC = () => {
 
           {/* Metrics Section */}
           <div className="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border-2 border-rose-100 dark:border-rose-900/30 shadow-lg shadow-rose-100/50 dark:shadow-none flex flex-col justify-center transition-transform active:scale-95">
-              <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">To Go</span>
-              <div className="text-3xl font-black tabular-nums text-slate-800 dark:text-slate-100">{pagesLeft}</div>
-              <span className="text-[9px] text-rose-400 font-bold uppercase mt-1">Pages Left</span>
+            <div className="bg-white dark:bg-[#1C1C1E] p-3 rounded-2xl border border-[#C6C6C8] dark:border-[#38383A] shadow-sm flex flex-col justify-center">
+              <span className="text-[10px] font-bold text-[#8E8E93] uppercase">Left</span>
+              <div className="text-2xl font-black tabular-nums">{pagesLeft}</div>
+              <span className="text-[10px] text-[#8E8E93]">pages</span>
             </div>
-
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border-2 border-amber-100 dark:border-amber-900/30 shadow-lg shadow-amber-100/50 dark:shadow-none flex flex-col justify-center transition-transform active:scale-95">
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Pace</span>
-              <div className="text-3xl font-black tabular-nums text-slate-800 dark:text-slate-100">{data.pagesPerDay}</div>
-              <span className="text-[9px] text-amber-500 font-bold uppercase mt-1">Daily Target</span>
+            <div className="bg-white dark:bg-[#1C1C1E] p-3 rounded-2xl border border-[#C6C6C8] dark:border-[#38383A] shadow-sm flex flex-col justify-center">
+              <span className="text-[10px] font-bold text-[#8E8E93] uppercase">Pace</span>
+              <div className="text-2xl font-black tabular-nums">{data.pagesPerDay}</div>
+              <span className="text-[10px] text-[#8E8E93]">daily</span>
             </div>
-
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-200 dark:shadow-none flex flex-col justify-center col-span-2 sm:col-span-1">
-              <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Finish</span>
-              <div className="text-[15px] font-black text-white mt-1 leading-tight">{estimatedFinishDate === 'N/A' ? '--' : estimatedFinishDate}</div>
-              <span className="text-[9px] text-indigo-200 font-bold uppercase mt-2 bg-white/10 w-fit px-2 py-0.5 rounded-full">Projected</span>
+            <div className="bg-white dark:bg-[#1C1C1E] p-3 rounded-2xl border border-[#C6C6C8] dark:border-[#38383A] shadow-sm flex flex-col justify-center col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-bold text-[#8E8E93] uppercase">End Date</span>
+              <div className="text-[14px] font-bold leading-none mt-1">{estimatedFinishDate === 'N/A' ? '--' : estimatedFinishDate}</div>
+              <span className="text-[10px] text-blue-500 font-semibold uppercase mt-1">Projected</span>
             </div>
           </div>
         </div>
 
-        {/* Mastery Progress Bar */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-             <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Overall Progress</h4>
-             <span className="text-[13px] font-black text-indigo-600 dark:text-indigo-400">{completionPercent}%</span>
-          </div>
-          <div className="h-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full p-0.5 relative overflow-hidden">
-            <div 
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 transition-all duration-1000 ease-out"
-              style={{ width: `${completionPercent}%` }}
-            >
-              <div className="absolute inset-0 bg-white/20 mix-blend-overlay animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Schedule Roadmap */}
-        <section className="bg-white dark:bg-slate-900 rounded-3xl border-2 border-indigo-50 dark:border-indigo-900/30 shadow-2xl shadow-indigo-100/30 dark:shadow-none overflow-hidden">
-          <div className="px-5 py-4 border-b border-indigo-50 dark:border-indigo-900/30 bg-gradient-to-r from-indigo-500 to-indigo-700 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-               <Calendar className="w-4 h-4 text-white" />
-               <h3 className="text-[12px] font-black text-white uppercase tracking-wider">Reading Roadmap</h3>
-            </div>
-            <span className="text-[9px] font-black bg-white/20 text-white px-2.5 py-1 rounded-full uppercase border border-white/30 backdrop-blur-sm">Starts Tomorrow</span>
+        {/* Simple Schedule Table */}
+        <section className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-[#C6C6C8] dark:border-[#38383A] shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#C6C6C8] dark:border-[#38383A] bg-[#FAFAFA] dark:bg-[#242426] flex items-center justify-between">
+            <h3 className="text-[13px] font-bold">Simple Schedule</h3>
+            <span className="text-[11px] font-bold text-blue-500 uppercase">Starts Tomorrow</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-indigo-50/50 dark:bg-indigo-950/30 text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3 text-right">Target Page</th>
-                  <th className="px-6 py-3 text-right">Goal</th>
+                <tr className="bg-[#F2F2F7] dark:bg-[#1C1C1E] text-[11px] font-bold text-[#8E8E93] uppercase">
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Read</th>
+                  <th className="px-4 py-2">To Page</th>
+                  <th className="px-4 py-2 text-right">Done</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-indigo-50 dark:divide-indigo-900/10">
+              <tbody className="divide-y divide-[#C6C6C8]/50 dark:divide-[#38383A]/50">
                 {schedule.length > 0 ? schedule.slice(0, 31).map((item, idx) => (
-                  <tr key={idx} className={`transition-all group ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/30 dark:bg-slate-800/20'} hover:bg-indigo-50 dark:hover:bg-indigo-900/20`}>
-                    <td className="px-6 py-3.5">
-                      <div className="text-[13px] font-black text-slate-800 dark:text-slate-100">{item.date}</div>
-                    </td>
-                    <td className="px-6 py-3.5 text-right">
-                      <div className="inline-flex items-center justify-end gap-1.5">
-                        <span className="text-[14px] font-black tabular-nums text-indigo-600 dark:text-indigo-400">P. {item.endPage}</span>
-                        <ChevronRight className="w-3 h-3 text-slate-300" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-3.5 text-right">
-                      <span className={`text-[11px] font-black px-2 py-1 rounded-lg ${idx % 3 === 0 ? 'bg-rose-100 text-rose-600' : idx % 3 === 1 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} dark:bg-opacity-20`}>
-                        +{item.pagesToReadToday}
-                      </span>
-                    </td>
+                  <tr key={idx} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors">
+                    <td className="px-4 py-3 text-[13px] font-bold whitespace-nowrap">{item.date}</td>
+                    <td className="px-4 py-3 text-[13px] tabular-nums font-medium">+{item.pagesToReadToday}</td>
+                    <td className="px-4 py-3 text-[13px] tabular-nums font-semibold text-blue-500">{item.endPage}</td>
+                    <td className="px-4 py-3 text-[13px] text-right tabular-nums text-[#8E8E93]">{item.percentComplete}%</td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center gap-2 opacity-50">
-                        <BookMarked className="w-8 h-8 text-slate-400" />
-                        <p className="text-[13px] font-bold text-slate-400">Enter stats to build your path.</p>
-                      </div>
+                    <td colSpan={4} className="px-4 py-12 text-center text-[#8E8E93] text-[14px]">
+                      Enter book stats to see your roadmap.
                     </td>
                   </tr>
                 )}
@@ -342,18 +272,15 @@ const App: React.FC = () => {
             </table>
           </div>
           {schedule.length > 31 && (
-            <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 text-center border-t border-indigo-50 dark:border-indigo-900/30">
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">Upcoming month mapped out above</p>
+            <div className="px-4 py-2 bg-[#FAFAFA] dark:bg-[#242426] text-center">
+              <p className="text-[11px] font-semibold text-[#8E8E93]">Showing next 31 days</p>
             </div>
           )}
         </section>
       </main>
 
-      <footer className="max-w-4xl mx-auto px-4 py-8 text-center mt-6">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-           <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Crafted by</p>
-           <span className="text-[11px] font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-rose-500">Imran Khan</span>
-        </div>
+      <footer className="max-w-4xl mx-auto px-4 py-6 text-center">
+        <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">© {new Date().getFullYear()} Imran Khan</p>
       </footer>
     </div>
   );
