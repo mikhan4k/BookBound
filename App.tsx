@@ -29,7 +29,10 @@ const App: React.FC = () => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
       try {
-        return JSON.parse(savedData);
+        const parsed = JSON.parse(savedData);
+        // Migration: Ensure startsFromToday exists
+        if (parsed.startsFromToday === undefined) parsed.startsFromToday = false;
+        return parsed;
       } catch (e) {
         console.error("Failed to parse saved data", e);
       }
@@ -39,7 +42,8 @@ const App: React.FC = () => {
       totalPages: 0,
       pagesRead: 0,
       targetFinishDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
-      pagesPerDay: 20
+      pagesPerDay: 20,
+      startsFromToday: false
     };
   });
 
@@ -67,10 +71,13 @@ const App: React.FC = () => {
     let currentPagesRead = Number(data.pagesRead);
     const total = Number(data.totalPages);
     const pace = Number(data.pagesPerDay);
-    let dayCount = 1;
+    
+    // Start counting from 0 if startsFromToday is true, otherwise start from 1 (tomorrow)
+    let dayOffset = data.startsFromToday ? 0 : 1;
+    let dayCount = 0;
 
     while (currentPagesRead < total) {
-      const date = addDays(today, dayCount);
+      const date = addDays(today, dayOffset + dayCount);
       const remainingForTarget = total - currentPagesRead;
       const readToday = Math.min(pace, remainingForTarget);
       
@@ -100,11 +107,15 @@ const App: React.FC = () => {
     : 'N/A';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    let newValue: string | number = value;
-    if (name !== 'bookTitle' && name !== 'targetFinishDate') {
+    const { name, value, type, checked } = e.target;
+    let newValue: string | number | boolean = value;
+    
+    if (type === 'checkbox') {
+      newValue = checked;
+    } else if (name !== 'bookTitle' && name !== 'targetFinishDate') {
       newValue = value === '' ? 0 : Math.max(0, parseInt(value, 10) || 0);
     }
+    
     setData(prev => ({ ...prev, [name]: newValue }));
   };
 
@@ -212,6 +223,20 @@ const App: React.FC = () => {
                     />
                   </div>
                 </div>
+                {/* Starts from today checkbox */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input 
+                    type="checkbox" 
+                    id="startsFromToday"
+                    name="startsFromToday"
+                    checked={data.startsFromToday}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 rounded-md border-gray-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <label htmlFor="startsFromToday" className="text-[12px] font-medium text-[#48484A] dark:text-[#AEAEB2] cursor-pointer select-none">
+                    Start reading schedule from today
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -239,8 +264,10 @@ const App: React.FC = () => {
         {/* Simple Schedule Table */}
         <section className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-[#C6C6C8] dark:border-[#38383A] shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-[#C6C6C8] dark:border-[#38383A] bg-[#FAFAFA] dark:bg-[#242426] flex items-center justify-between">
-            <h3 className="text-[13px] font-bold">Simple Schedule</h3>
-            <span className="text-[11px] font-bold text-blue-500 uppercase">Starts Tomorrow</span>
+            <h3 className="text-[13px] font-bold">Daily Reading Plan</h3>
+            <span className="text-[11px] font-bold text-blue-500 uppercase">
+              {data.startsFromToday ? 'Starts Today' : 'Starts Tomorrow'}
+            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -248,9 +275,9 @@ const App: React.FC = () => {
               <thead>
                 <tr className="bg-[#F2F2F7] dark:bg-[#1C1C1E] text-[11px] font-bold text-[#8E8E93] uppercase">
                   <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Read</th>
-                  <th className="px-4 py-2">To Page</th>
-                  <th className="px-4 py-2 text-right">Done</th>
+                  <th className="px-4 py-2">Goal</th>
+                  <th className="px-4 py-2">Page Range</th>
+                  <th className="px-4 py-2 text-right">Progress</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#C6C6C8]/50 dark:divide-[#38383A]/50">
@@ -258,7 +285,9 @@ const App: React.FC = () => {
                   <tr key={idx} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors">
                     <td className="px-4 py-3 text-[13px] font-bold whitespace-nowrap">{item.date}</td>
                     <td className="px-4 py-3 text-[13px] tabular-nums font-medium">+{item.pagesToReadToday}</td>
-                    <td className="px-4 py-3 text-[13px] tabular-nums font-semibold text-blue-500">{item.endPage}</td>
+                    <td className="px-4 py-3 text-[13px] tabular-nums font-semibold text-blue-500 whitespace-nowrap">
+                      {item.startPage} — {item.endPage}
+                    </td>
                     <td className="px-4 py-3 text-[13px] text-right tabular-nums text-[#8E8E93]">{item.percentComplete}%</td>
                   </tr>
                 )) : (
@@ -280,7 +309,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="max-w-4xl mx-auto px-4 py-6 text-center">
-        <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">© {new Date().getFullYear()} Imran Khan</p>
+        <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">© {new Date().getFullYear()} BookBound Planner</p>
       </footer>
     </div>
   );

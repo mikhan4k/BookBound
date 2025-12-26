@@ -5,6 +5,7 @@ export interface ReadingData {
   pagesRead: number;
   targetFinishDate: string;
   pagesPerDay: number;
+  startsFromToday: boolean;
 }
 
 export interface ScheduleItem {
